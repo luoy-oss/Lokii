@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../utils/theme.dart';
 import '../utils/formatters.dart';
@@ -14,105 +15,126 @@ class MonthPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.chevron_left),
-            onPressed: () {
-              onMonthChanged(DateTime(
-                selectedMonth.year,
-                selectedMonth.month - 1,
-              ));
-            },
-          ),
-          const SizedBox(width: 16),
-          GestureDetector(
-            onTap: () => _showMonthPickerDialog(context),
-            child: Text(
+    return GestureDetector(
+      onTap: () => _showPicker(context),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppTheme.card2Color(context),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
               Formatters.month(selectedMonth),
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.text1(context),
+              ),
             ),
-          ),
-          const SizedBox(width: 16),
-          IconButton(
-            icon: const Icon(Icons.chevron_right),
-            onPressed: () {
-              onMonthChanged(DateTime(
-                selectedMonth.year,
-                selectedMonth.month + 1,
-              ));
-            },
-          ),
-        ],
+            const SizedBox(width: 4),
+            Icon(
+              Icons.keyboard_arrow_down,
+              size: 20,
+              color: AppTheme.text2(context),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  void _showMonthPickerDialog(BuildContext context) {
-    showDialog(
+  void _showPicker(BuildContext context) {
+    int tempYear = selectedMonth.year;
+    int tempMonth = selectedMonth.month;
+
+    showModalBottomSheet(
       context: context,
       builder: (ctx) {
-        int selectedYear = selectedMonth.year;
-        return StatefulBuilder(
-          builder: (ctx, setState) {
-            return AlertDialog(
-              title: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.chevron_left),
-                    onPressed: () => setState(() => selectedYear--),
-                  ),
-                  Text('$selectedYear年', style: const TextStyle(fontSize: 17)),
-                  IconButton(
-                    icon: const Icon(Icons.chevron_right),
-                    onPressed: () => setState(() => selectedYear++),
-                  ),
-                ],
+        return Container(
+          height: 300,
+          decoration: BoxDecoration(
+            color: Theme.of(ctx).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          child: Column(
+            children: [
+              // Handle bar
+              Container(
+                margin: const EdgeInsets.only(top: 8),
+                width: 36,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: AppTheme.separator(ctx).withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(2.5),
+                ),
               ),
-              content: SizedBox(
-                width: 300,
-                child: GridView.builder(
-                  shrinkWrap: true,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 4,
-                    mainAxisSpacing: 8,
-                    crossAxisSpacing: 8,
-                  ),
-                  itemCount: 12,
-                  itemBuilder: (ctx, index) {
-                    final month = index + 1;
-                    final isSelected = selectedYear == selectedMonth.year &&
-                        month == selectedMonth.month;
-
-                    return GestureDetector(
-                      onTap: () {
-                        onMonthChanged(DateTime(selectedYear, month));
+              // Action bar
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('取消'),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        onMonthChanged(DateTime(tempYear, tempMonth));
                         Navigator.pop(ctx);
                       },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: isSelected ? AppTheme.primaryBlue : const Color(0xFFF2F2F7),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          '$month月',
-                          style: TextStyle(
-                            color: isSelected ? Colors.white : AppTheme.textPrimary,
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                      child: const Text('确定', style: TextStyle(fontWeight: FontWeight.w600)),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 0.5),
+              // Pickers
+              Expanded(
+                child: StatefulBuilder(
+                  builder: (ctx, setState) {
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: CupertinoPicker(
+                            scrollController: FixedExtentScrollController(
+                              initialItem: tempYear - 2020,
+                            ),
+                            itemExtent: 44,
+                            onSelectedItemChanged: (i) => setState(() => tempYear = 2020 + i),
+                            children: List.generate(20, (i) {
+                              return Center(
+                                child: Text('${2020 + i}年',
+                                    style: const TextStyle(fontSize: 20)),
+                              );
+                            }),
                           ),
                         ),
-                      ),
+                        Expanded(
+                          child: CupertinoPicker(
+                            scrollController: FixedExtentScrollController(
+                              initialItem: tempMonth - 1,
+                            ),
+                            itemExtent: 44,
+                            onSelectedItemChanged: (i) => setState(() => tempMonth = i + 1),
+                            children: List.generate(12, (i) {
+                              return Center(
+                                child: Text('${i + 1}月',
+                                    style: const TextStyle(fontSize: 20)),
+                              );
+                            }),
+                          ),
+                        ),
+                      ],
                     );
                   },
                 ),
               ),
-            );
-          },
+            ],
+          ),
         );
       },
     );

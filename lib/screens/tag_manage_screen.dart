@@ -12,7 +12,7 @@ class TagManageScreen extends StatefulWidget {
 
 class _TagManageScreenState extends State<TagManageScreen> {
   List<Tag> _tags = [];
-  bool _isLoading = true;
+  bool _loading = true;
 
   @override
   void initState() {
@@ -24,64 +24,70 @@ class _TagManageScreenState extends State<TagManageScreen> {
     final maps = await DBHelper.instance.getTags();
     setState(() {
       _tags = maps.map((m) => Tag.fromMap(m)).toList();
-      _isLoading = false;
+      _loading = false;
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.backgroundGray,
+      backgroundColor: AppTheme.bg(context),
       appBar: AppBar(
         title: const Text('标签管理'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: _showAddTagDialog,
-          ),
+          IconButton(icon: const Icon(Icons.add), onPressed: _showAddDialog),
         ],
       ),
-      body: _isLoading
+      body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _tags.isEmpty
-              ? const Center(
+              ? Center(
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.label_off, size: 64, color: AppTheme.textTertiary),
-                      SizedBox(height: 16),
-                      Text('还没有标签', style: TextStyle(color: AppTheme.textSecondary, fontSize: 17)),
-                      SizedBox(height: 8),
-                      Text('记账时可以添加标签', style: TextStyle(color: AppTheme.textTertiary, fontSize: 15)),
+                      Icon(Icons.label_off, size: 64, color: AppTheme.text3(context)),
+                      const SizedBox(height: 16),
+                      Text('还没有标签',
+                          style: TextStyle(color: AppTheme.text2(context), fontSize: 17)),
+                      const SizedBox(height: 8),
+                      Text('记账时可以添加标签',
+                          style: TextStyle(color: AppTheme.text3(context), fontSize: 15)),
                     ],
                   ),
                 )
               : ListView.builder(
                   padding: const EdgeInsets.all(16),
                   itemCount: _tags.length,
-                  itemBuilder: (context, index) {
+                  itemBuilder: (_, index) {
                     final tag = _tags[index];
                     return Container(
                       margin: const EdgeInsets.only(bottom: 8),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppTheme.cardColor(context),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: ListTile(
-                        leading: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: AppTheme.primaryBlue.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
+                      child: Material(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                        child: ListTile(
+                          leading: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryBlue.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.label, color: AppTheme.primaryBlue, size: 18),
                           ),
-                          child: const Icon(Icons.label, color: AppTheme.primaryBlue, size: 18),
-                        ),
-                        title: Text(tag.name),
-                        subtitle: Text('使用 ${tag.useCount} 次'),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete_outline, color: AppTheme.destructiveRed),
-                          onPressed: () => _deleteTag(tag),
+                          title: Text(tag.name,
+                              style: TextStyle(color: AppTheme.text1(context))),
+                          subtitle: Text('使用 ${tag.useCount} 次',
+                              style: TextStyle(color: AppTheme.text2(context))),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete_outline,
+                                color: AppTheme.destructiveRed),
+                            onPressed: () => _deleteTag(tag),
+                          ),
                         ),
                       ),
                     );
@@ -90,14 +96,14 @@ class _TagManageScreenState extends State<TagManageScreen> {
     );
   }
 
-  void _showAddTagDialog() {
-    final controller = TextEditingController();
+  void _showAddDialog() {
+    final ctrl = TextEditingController();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('添加标签'),
         content: TextField(
-          controller: controller,
+          controller: ctrl,
           decoration: const InputDecoration(hintText: '输入标签名称'),
           autofocus: true,
         ),
@@ -105,7 +111,7 @@ class _TagManageScreenState extends State<TagManageScreen> {
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
           TextButton(
             onPressed: () async {
-              final name = controller.text.trim();
+              final name = ctrl.text.trim();
               if (name.isNotEmpty) {
                 await DBHelper.instance.insertTag({
                   'id': DateTime.now().millisecondsSinceEpoch.toString(),
@@ -125,7 +131,7 @@ class _TagManageScreenState extends State<TagManageScreen> {
   }
 
   Future<void> _deleteTag(Tag tag) async {
-    final confirmed = await showDialog<bool>(
+    final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('确认删除'),
@@ -139,8 +145,7 @@ class _TagManageScreenState extends State<TagManageScreen> {
         ],
       ),
     );
-
-    if (confirmed == true) {
+    if (ok == true) {
       await DBHelper.instance.deleteTag(tag.id);
       await _loadTags();
     }

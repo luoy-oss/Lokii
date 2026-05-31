@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/transaction_provider.dart';
-import '../providers/category_provider.dart';
 import '../utils/theme.dart';
 import '../utils/formatters.dart';
 import '../widgets/transaction_tile.dart';
+import '../widgets/month_picker.dart';
 import 'add_transaction_screen.dart';
 import 'statistics_screen.dart';
 import 'settings_screen.dart';
@@ -22,27 +22,29 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: const [
-          _BookkeepingTab(),
-          StatisticsScreen(),
-          SettingsScreen(),
-        ],
-      ),
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: AppTheme.separatorGray, width: 0.5)),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (i) => setState(() => _currentIndex = i),
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.receipt_long), label: '记账'),
-            BottomNavigationBarItem(icon: Icon(Icons.pie_chart), label: '统计'),
-            BottomNavigationBarItem(icon: Icon(Icons.settings), label: '设置'),
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 250),
+        transitionBuilder: (child, animation) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        child: IndexedStack(
+          key: ValueKey(_currentIndex),
+          index: _currentIndex,
+          children: const [
+            _BookkeepingTab(),
+            StatisticsScreen(),
+            SettingsScreen(),
           ],
         ),
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _currentIndex,
+        onDestinationSelected: (i) => setState(() => _currentIndex = i),
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long), label: '记账'),
+          NavigationDestination(icon: Icon(Icons.pie_chart), selectedIcon: Icon(Icons.analytics), label: '统计'),
+          NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: '设置'),
+        ],
       ),
       floatingActionButton: _currentIndex == 0
           ? FloatingActionButton(
@@ -56,10 +58,27 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _navigateToAdd(BuildContext context) {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const AddTransactionScreen()),
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => const AddTransactionScreen(),
+        transitionsBuilder: (_, animation, __, child) {
+          return SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 1),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOutCubic,
+            )),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 350),
+      ),
     );
   }
 }
+
+// ── 记账 Tab ──────────────────────────────────────────────────────────
 
 class _BookkeepingTab extends StatelessWidget {
   const _BookkeepingTab();
@@ -81,126 +100,92 @@ class _BookkeepingTab extends StatelessWidget {
 
         return CustomScrollView(
           slivers: [
-            // 顶部 App Bar
+            // ── 顶部 App Bar ──
             SliverAppBar(
               floating: true,
               pinned: true,
-              expandedHeight: 240,
-              backgroundColor: AppTheme.backgroundGray,
+              expandedHeight: 220,
+              backgroundColor: AppTheme.bg(context),
               flexibleSpace: FlexibleSpaceBar(
-                background: _buildMonthSummary(context, provider, month),
+                background: _MonthSummary(provider: provider, month: month),
               ),
-              title: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.chevron_left, size: 28),
-                    onPressed: () => provider.previousMonth(),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    Formatters.month(month),
-                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.chevron_right, size: 28),
-                    onPressed: () => provider.nextMonth(),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                ],
+              title: MonthPicker(
+                selectedMonth: month,
+                onMonthChanged: (m) => provider.setSelectedMonth(m),
               ),
               centerTitle: true,
             ),
 
-            // 账目列表
+            // ── 账目列表 / 空状态 ──
             if (transactions.isEmpty)
-              const SliverFillRemaining(
+              SliverFillRemaining(
+                hasScrollBody: false,
                 child: Center(
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.receipt_long, size: 64, color: AppTheme.textTertiary),
-                      SizedBox(height: 16),
-                      Text('本月还没有记录', style: TextStyle(color: AppTheme.textSecondary, fontSize: 17)),
-                      SizedBox(height: 8),
-                      Text('点击 + 开始记账', style: TextStyle(color: AppTheme.textTertiary, fontSize: 15)),
+                      Icon(Icons.receipt_long, size: 64, color: AppTheme.text3(context)),
+                      const SizedBox(height: 16),
+                      Text('本月还没有记录',
+                          style: TextStyle(color: AppTheme.text2(context), fontSize: 17)),
+                      const SizedBox(height: 8),
+                      Text('点击 + 开始记账',
+                          style: TextStyle(color: AppTheme.text3(context), fontSize: 15)),
                     ],
                   ),
                 ),
               )
             else
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    if (index >= dateKeys.length) return null;
-                    final dateKey = dateKeys[index];
-                    final dayTransactions = grouped[dateKey]!;
-                    final date = dayTransactions.first.date;
+              SliverList.builder(
+                itemCount: dateKeys.length,
+                itemBuilder: (context, index) {
+                  final dateKey = dateKeys[index];
+                  final dayTransactions = grouped[dateKey]!;
+                  final date = dayTransactions.first.date;
 
-                    // 计算当日收支
-                    double dayExpense = 0;
-                    double dayIncome = 0;
-                    for (var t in dayTransactions) {
-                      if (t.isExpense) {
-                        dayExpense += t.amount;
-                      } else {
-                        dayIncome += t.amount;
-                      }
-                    }
+                  double dayExpense = 0, dayIncome = 0;
+                  for (var t in dayTransactions) {
+                    if (t.isExpense) dayExpense += t.amount;
+                    else dayIncome += t.amount;
+                  }
 
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // 日期头部
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  '${Formatters.day(date)} ${Formatters.shortWeekday(date)}',
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppTheme.textSecondary,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 日期头部
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${Formatters.day(date)} ${Formatters.shortWeekday(date)}',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.text2(context),
                                 ),
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              const SizedBox(width: 8),
-                              Flexible(
-                                child: Text(
-                                  '支出 ${Formatters.currency(dayExpense)}  收入 ${Formatters.currency(dayIncome)}',
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    color: AppTheme.textTertiary,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                  textAlign: TextAlign.end,
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                            Text(
+                              '支出 ${Formatters.currency(dayExpense)}  收入 ${Formatters.currency(dayIncome)}',
+                              style: TextStyle(fontSize: 13, color: AppTheme.text3(context)),
+                            ),
+                          ],
                         ),
-                        // 当日账目列表
-                        ...dayTransactions.map((t) => TransactionTile(
-                              transaction: t,
-                              onTap: () => _editTransaction(context, t),
-                              onDelete: () => _deleteTransaction(context, provider, t),
-                            )),
-                      ],
-                    );
-                  },
-                  childCount: dateKeys.length,
-                ),
+                      ),
+                      // 当日账目
+                      ...dayTransactions.map((t) => TransactionTile(
+                            transaction: t,
+                            onTap: () => _editTransaction(context, t),
+                            onDelete: () => _deleteTransaction(context, provider, t),
+                          )),
+                    ],
+                  );
+                },
               ),
 
-            // 底部留白
             const SliverToBoxAdapter(child: SizedBox(height: 80)),
           ],
         );
@@ -208,7 +193,43 @@ class _BookkeepingTab extends StatelessWidget {
     );
   }
 
-  Widget _buildMonthSummary(BuildContext context, TransactionProvider provider, DateTime month) {
+  void _editTransaction(BuildContext context, dynamic t) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => AddTransactionScreen(editTransaction: t)),
+    );
+  }
+
+  void _deleteTransaction(BuildContext context, TransactionProvider provider, dynamic t) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('确认删除'),
+        content: const Text('删除后无法恢复，确定要删除吗？'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          TextButton(
+            onPressed: () {
+              provider.deleteTransaction(t.id);
+              Navigator.pop(ctx);
+            },
+            child: const Text('删除', style: TextStyle(color: AppTheme.destructiveRed)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── 月度汇总卡片 ──────────────────────────────────────────────────────
+
+class _MonthSummary extends StatelessWidget {
+  final TransactionProvider provider;
+  final DateTime month;
+
+  const _MonthSummary({required this.provider, required this.month});
+
+  @override
+  Widget build(BuildContext context) {
     return FutureBuilder<Map<String, double>>(
       future: provider.getMonthlySummary(month.year, month.month),
       builder: (context, snapshot) {
@@ -221,14 +242,19 @@ class _BookkeepingTab extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              const Text('本月结余', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+              Text('本月结余',
+                  style: TextStyle(color: AppTheme.text2(context), fontSize: 14)),
               const SizedBox(height: 4),
-              Text(
-                Formatters.currency(balance),
-                style: TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.w700,
-                  color: balance >= 0 ? AppTheme.successGreen : AppTheme.destructiveRed,
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: Text(
+                  Formatters.currency(balance),
+                  key: ValueKey(balance),
+                  style: TextStyle(
+                    fontSize: 30,
+                    fontWeight: FontWeight.w700,
+                    color: balance >= 0 ? AppTheme.successGreen : AppTheme.destructiveRed,
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -241,7 +267,11 @@ class _BookkeepingTab extends StatelessWidget {
                       color: AppTheme.successGreen,
                     ),
                   ),
-                  Container(width: 0.5, height: 30, color: AppTheme.separatorGray),
+                  Container(
+                    width: 0.5,
+                    height: 30,
+                    color: AppTheme.separator(context),
+                  ),
                   Expanded(
                     child: _SummaryItem(
                       label: '支出',
@@ -255,34 +285,6 @@ class _BookkeepingTab extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-
-  void _editTransaction(BuildContext context, dynamic transaction) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => AddTransactionScreen(editTransaction: transaction),
-      ),
-    );
-  }
-
-  void _deleteTransaction(BuildContext context, TransactionProvider provider, dynamic transaction) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('确认删除'),
-        content: const Text('删除后无法恢复，确定要删除吗？'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-          TextButton(
-            onPressed: () {
-              provider.deleteTransaction(transaction.id);
-              Navigator.pop(ctx);
-            },
-            child: const Text('删除', style: TextStyle(color: AppTheme.destructiveRed)),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -302,7 +304,7 @@ class _SummaryItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+        Text(label, style: TextStyle(color: AppTheme.text2(context), fontSize: 13)),
         const SizedBox(height: 4),
         Text(
           Formatters.currency(amount),

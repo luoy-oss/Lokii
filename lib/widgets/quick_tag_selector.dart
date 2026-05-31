@@ -19,7 +19,7 @@ class QuickTagSelector extends StatefulWidget {
 
 class _QuickTagSelectorState extends State<QuickTagSelector> {
   List<Tag> _recentTags = [];
-  List<String> _presetTags = ['日常', '工作', '社交', '家庭', '个人', '旅行', '学习', '健康'];
+  final List<String> _presetTags = ['日常', '工作', '社交', '家庭', '个人', '旅行', '学习', '健康'];
 
   @override
   void initState() {
@@ -30,9 +30,7 @@ class _QuickTagSelectorState extends State<QuickTagSelector> {
   Future<void> _loadRecentTags() async {
     final maps = await DBHelper.instance.getTags(limit: 8);
     if (mounted) {
-      setState(() {
-        _recentTags = maps.map((m) => Tag.fromMap(m)).toList();
-      });
+      setState(() => _recentTags = maps.map((m) => Tag.fromMap(m)).toList());
     }
   }
 
@@ -43,52 +41,35 @@ class _QuickTagSelectorState extends State<QuickTagSelector> {
       children: [
         // 最近使用的标签
         if (_recentTags.isNotEmpty) ...[
-          const Text(
-            '最近使用',
-            style: TextStyle(fontSize: 13, color: AppTheme.textTertiary),
-          ),
+          Text('最近使用', style: TextStyle(fontSize: 13, color: AppTheme.text3(context))),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: _recentTags.map((tag) {
-              final isSelected = widget.selectedTags.contains(tag.name);
-              return _TagChip(
-                label: tag.name,
-                isSelected: isSelected,
-                onTap: () => widget.onTagToggle(tag.name),
-              );
+              final selected = widget.selectedTags.contains(tag.name);
+              return _TagChip(label: tag.name, isSelected: selected, onTap: () => widget.onTagToggle(tag.name));
             }).toList(),
           ),
           const SizedBox(height: 16),
         ],
 
         // 预设标签
-        const Text(
-          '常用标签',
-          style: TextStyle(fontSize: 13, color: AppTheme.textTertiary),
-        ),
+        Text('常用标签', style: TextStyle(fontSize: 13, color: AppTheme.text3(context))),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
           runSpacing: 8,
           children: _presetTags.map((tag) {
-            final isSelected = widget.selectedTags.contains(tag);
-            return _TagChip(
-              label: tag,
-              isSelected: isSelected,
-              onTap: () => widget.onTagToggle(tag),
-            );
+            final selected = widget.selectedTags.contains(tag);
+            return _TagChip(label: tag, isSelected: selected, onTap: () => widget.onTagToggle(tag));
           }).toList(),
         ),
 
         // 已选标签
         if (widget.selectedTags.isNotEmpty) ...[
           const SizedBox(height: 16),
-          const Text(
-            '已选标签',
-            style: TextStyle(fontSize: 13, color: AppTheme.textTertiary),
-          ),
+          Text('已选标签', style: TextStyle(fontSize: 13, color: AppTheme.text3(context))),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
@@ -124,18 +105,19 @@ class _TagChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primaryBlue : const Color(0xFFF2F2F7),
+          color: isSelected ? AppTheme.primaryBlue : AppTheme.card2Color(context),
           borderRadius: BorderRadius.circular(20),
-          border: isSelected ? null : Border.all(color: const Color(0xFFE5E5EA)),
+          border: isSelected ? null : Border.all(color: AppTheme.separator(context)),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 14,
-            color: isSelected ? Colors.white : AppTheme.textPrimary,
+            color: isSelected ? Colors.white : AppTheme.text1(context),
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
           ),
         ),

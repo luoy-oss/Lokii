@@ -13,19 +13,19 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.backgroundGray,
+      backgroundColor: AppTheme.bg(context),
       appBar: AppBar(title: const Text('设置')),
       body: ListView(
         children: [
           const SizedBox(height: 20),
 
-          // 自动记账开关
-          _buildSection(
-            title: '自动记账',
+          // 自动记账
+          _SectionHeader(title: '自动记账'),
+          _SectionCard(
             children: [
               Consumer<SettingsProvider>(
                 builder: (context, settings, _) {
-                  return _buildSwitchTile(
+                  return _SwitchTile(
                     icon: Icons.notifications_active,
                     iconColor: AppTheme.warningOrange,
                     title: '通知自动记账',
@@ -40,25 +40,46 @@ class SettingsScreen extends StatelessWidget {
 
           const SizedBox(height: 20),
 
-          // 数据管理
-          _buildSection(
-            title: '数据管理',
+          // 深色模式
+          _SectionHeader(title: '外观'),
+          _SectionCard(
             children: [
-              _buildTile(
+              Consumer<SettingsProvider>(
+                builder: (context, settings, _) {
+                  return _SwitchTile(
+                    icon: Icons.dark_mode,
+                    iconColor: AppTheme.primaryBlue,
+                    title: '深色模式',
+                    subtitle: '切换深色/浅色主题',
+                    value: settings.darkModeEnabled,
+                    onChanged: (v) => settings.setDarkModeEnabled(v),
+                  );
+                },
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          // 数据管理
+          _SectionHeader(title: '数据管理'),
+          _SectionCard(
+            children: [
+              _ActionTile(
                 icon: Icons.download,
                 iconColor: AppTheme.primaryBlue,
                 title: '导出本月数据',
                 onTap: () => _exportCurrentMonth(context),
               ),
-              const Divider(height: 0.5, indent: 56),
-              _buildTile(
+              _Divider(context),
+              _ActionTile(
                 icon: Icons.calendar_month,
                 iconColor: AppTheme.successGreen,
                 title: '导出指定月份',
                 onTap: () => _exportByMonth(context),
               ),
-              const Divider(height: 0.5, indent: 56),
-              _buildTile(
+              _Divider(context),
+              _ActionTile(
                 icon: Icons.all_inclusive,
                 iconColor: AppTheme.destructiveRed,
                 title: '导出全部数据',
@@ -70,18 +91,16 @@ class SettingsScreen extends StatelessWidget {
           const SizedBox(height: 20),
 
           // 标签管理
-          _buildSection(
-            title: '标签管理',
+          _SectionHeader(title: '标签'),
+          _SectionCard(
             children: [
-              _buildTile(
+              _ActionTile(
                 icon: Icons.label,
                 iconColor: AppTheme.primaryBlue,
                 title: '管理标签',
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const TagManageScreen()),
-                  );
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const TagManageScreen()));
                 },
               ),
             ],
@@ -90,14 +109,15 @@ class SettingsScreen extends StatelessWidget {
           const SizedBox(height: 20),
 
           // 关于
-          _buildSection(
-            title: '关于',
+          _SectionHeader(title: '关于'),
+          _SectionCard(
             children: [
-              _buildTile(
+              _ActionTile(
                 icon: Icons.info_outline,
-                iconColor: AppTheme.textSecondary,
+                iconColor: AppTheme.text2(context),
                 title: 'Lokii 记账',
                 subtitle: 'v1.0.0',
+                showArrow: false,
                 onTap: () {},
               ),
             ],
@@ -109,44 +129,140 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSection({required String title, required List<Widget> children}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-          child: Text(
-            title.toUpperCase(),
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.textSecondary,
+  Future<void> _exportCurrentMonth(BuildContext context) async {
+    final provider = context.read<TransactionProvider>();
+    final now = DateTime.now();
+    final txns = await provider.getAllTransactions(
+      startDate: DateTime(now.year, now.month, 1),
+      endDate: DateTime(now.year, now.month + 1, 0, 23, 59, 59),
+    );
+    if (txns.isEmpty) return _snack(context, '本月没有数据可导出');
+    final path = await ExportHelper.exportAndSave(txns, dateRange: Formatters.month(now));
+    _showExportResult(context, path);
+  }
+
+  Future<void> _exportByMonth(BuildContext context) async {
+    final provider = context.read<TransactionProvider>();
+    final now = DateTime.now();
+    final last = DateTime(now.year, now.month - 1);
+    final txns = await provider.getAllTransactions(
+      startDate: DateTime(last.year, last.month, 1),
+      endDate: DateTime(last.year, last.month + 1, 0, 23, 59, 59),
+    );
+    if (txns.isEmpty) return _snack(context, '上月没有数据可导出');
+    final path = await ExportHelper.exportAndSave(txns, dateRange: Formatters.month(last));
+    _showExportResult(context, path);
+  }
+
+  Future<void> _exportAll(BuildContext context) async {
+    final provider = context.read<TransactionProvider>();
+    final txns = await provider.getAllTransactions();
+    if (txns.isEmpty) return _snack(context, '没有数据可导出');
+    final path = await ExportHelper.exportAndSave(txns, dateRange: '全部');
+    _showExportResult(context, path);
+  }
+
+  void _showExportResult(BuildContext context, String path) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('导出成功'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('文件已保存到：'),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.card2Color(ctx),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: SelectableText(
+                path,
+                style: TextStyle(fontSize: 13, color: AppTheme.text2(ctx)),
+              ),
             ),
-          ),
+          ],
         ),
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('确定'),
           ),
-          child: Material(
-            color: Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-            child: Column(children: children),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _buildTile({
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-    String? subtitle,
-    required VoidCallback onTap,
-  }) {
+  void _snack(BuildContext context, String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+}
+
+// ── 构建块 ────────────────────────────────────────────────────────────
+
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  const _SectionHeader({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(32, 0, 16, 8),
+      child: Text(
+        title.toUpperCase(),
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w400,
+          color: AppTheme.text2(context),
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionCard extends StatelessWidget {
+  final List<Widget> children;
+  const _SectionCard({required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: AppTheme.cardColor(context),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: Column(children: children),
+      ),
+    );
+  }
+}
+
+class _ActionTile extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String? subtitle;
+  final bool showArrow;
+  final VoidCallback onTap;
+
+  const _ActionTile({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    this.subtitle,
+    this.showArrow = true,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return ListTile(
       leading: Container(
         width: 32,
@@ -157,21 +273,37 @@ class SettingsScreen extends StatelessWidget {
         ),
         child: Icon(icon, color: iconColor, size: 18),
       ),
-      title: Text(title),
-      subtitle: subtitle != null ? Text(subtitle) : null,
-      trailing: const Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+      title: Text(title, style: TextStyle(color: AppTheme.text1(context))),
+      subtitle: subtitle != null
+          ? Text(subtitle!, style: TextStyle(color: AppTheme.text2(context)))
+          : null,
+      trailing: showArrow
+          ? Icon(Icons.chevron_right, color: AppTheme.text3(context), size: 20)
+          : null,
       onTap: onTap,
     );
   }
+}
 
-  Widget _buildSwitchTile({
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
+class _SwitchTile extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _SwitchTile({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return ListTile(
       leading: Container(
         width: 32,
@@ -182,8 +314,8 @@ class SettingsScreen extends StatelessWidget {
         ),
         child: Icon(icon, color: iconColor, size: 18),
       ),
-      title: Text(title),
-      subtitle: Text(subtitle),
+      title: Text(title, style: TextStyle(color: AppTheme.text1(context))),
+      subtitle: Text(subtitle, style: TextStyle(color: AppTheme.text2(context))),
       trailing: Switch(
         value: value,
         onChanged: onChanged,
@@ -191,57 +323,8 @@ class SettingsScreen extends StatelessWidget {
       ),
     );
   }
+}
 
-  Future<void> _exportCurrentMonth(BuildContext context) async {
-    final provider = context.read<TransactionProvider>();
-    final now = DateTime.now();
-    final transactions = await provider.getAllTransactions(
-      startDate: DateTime(now.year, now.month, 1),
-      endDate: DateTime(now.year, now.month + 1, 0, 23, 59, 59),
-    );
-    if (transactions.isEmpty) {
-      _showSnackBar(context, '本月没有数据可导出');
-      return;
-    }
-    await ExportHelper.exportAndShare(transactions, dateRange: Formatters.month(now));
-    _showSnackBar(context, '导出成功');
-  }
-
-  Future<void> _exportByMonth(BuildContext context) async {
-    // 简化实现：导出上个月
-    final provider = context.read<TransactionProvider>();
-    final now = DateTime.now();
-    final lastMonth = DateTime(now.year, now.month - 1);
-    final transactions = await provider.getAllTransactions(
-      startDate: DateTime(lastMonth.year, lastMonth.month, 1),
-      endDate: DateTime(lastMonth.year, lastMonth.month + 1, 0, 23, 59, 59),
-    );
-    if (transactions.isEmpty) {
-      _showSnackBar(context, '上月没有数据可导出');
-      return;
-    }
-    await ExportHelper.exportAndShare(transactions, dateRange: Formatters.month(lastMonth));
-    _showSnackBar(context, '导出成功');
-  }
-
-  Future<void> _exportAll(BuildContext context) async {
-    final provider = context.read<TransactionProvider>();
-    final transactions = await provider.getAllTransactions();
-    if (transactions.isEmpty) {
-      _showSnackBar(context, '没有数据可导出');
-      return;
-    }
-    await ExportHelper.exportAndShare(transactions, dateRange: '全部');
-    _showSnackBar(context, '导出成功');
-  }
-
-  void _showSnackBar(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-  }
+Widget _Divider(BuildContext context) {
+  return Divider(height: 0.5, indent: 56, color: AppTheme.separator(context));
 }

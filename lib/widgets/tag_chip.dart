@@ -21,12 +21,9 @@ class TagChip extends StatelessWidget {
       return Chip(
         label: Text(
           label,
-          style: TextStyle(
-            fontSize: 13,
-            color: isSelected ? Colors.white : AppTheme.textPrimary,
-          ),
+          style: TextStyle(fontSize: 13, color: isSelected ? Colors.white : AppTheme.text1(context)),
         ),
-        backgroundColor: isSelected ? AppTheme.primaryBlue : const Color(0xFFF2F2F7),
+        backgroundColor: isSelected ? AppTheme.primaryBlue : AppTheme.card2Color(context),
         deleteIcon: const Icon(Icons.close, size: 16),
         onDeleted: onDelete,
         padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -35,18 +32,19 @@ class TagChip extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primaryBlue : const Color(0xFFF2F2F7),
+          color: isSelected ? AppTheme.primaryBlue : AppTheme.card2Color(context),
           borderRadius: BorderRadius.circular(20),
-          border: isSelected ? null : Border.all(color: const Color(0xFFE5E5EA)),
+          border: isSelected ? null : Border.all(color: AppTheme.separator(context)),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 14,
-            color: isSelected ? Colors.white : AppTheme.textPrimary,
+            color: isSelected ? Colors.white : AppTheme.text1(context),
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
           ),
         ),

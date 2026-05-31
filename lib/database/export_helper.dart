@@ -1,16 +1,32 @@
 import 'dart:io';
 import 'package:csv/csv.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 import '../models/transaction.dart';
 import '../utils/formatters.dart';
 
 class ExportHelper {
-  /// 导出账目为 CSV 文件
+  /// 获取导出目录（Windows: 文档/Lokii, 其他: 应用文档目录）
+  static Future<Directory> _getExportDir() async {
+    Directory baseDir;
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      // 桌面平台：保存到用户文档目录
+      baseDir = await getApplicationDocumentsDirectory();
+    } else {
+      baseDir = await getApplicationDocumentsDirectory();
+    }
+
+    final exportDir = Directory('${baseDir.path}${Platform.pathSeparator}Lokii导出');
+    if (!await exportDir.exists()) {
+      await exportDir.create(recursive: true);
+    }
+    return exportDir;
+  }
+
+  /// 导出账目为 CSV 文件并保存到本地
   static Future<File> exportToCSV(List<Transaction> transactions, {String? fileName}) async {
-    final dir = await getTemporaryDirectory();
+    final dir = await _getExportDir();
     final name = fileName ?? 'lokii_export_${Formatters.date(DateTime.now())}.csv';
-    final file = File('${dir.path}/$name');
+    final file = File('${dir.path}${Platform.pathSeparator}$name');
 
     List<List<dynamic>> rows = [
       ['日期', '类型', '分类', '金额', '标签', '备注', '自动记录'],
@@ -34,21 +50,13 @@ class ExportHelper {
     return file;
   }
 
-  /// 分享导出的文件
-  static Future<void> shareCSV(File file) async {
-    await Share.shareXFiles(
-      [XFile(file.path)],
-      subject: 'Lokii 记账数据导出',
-    );
-  }
-
-  /// 导出指定时间范围的账目
-  static Future<void> exportAndShare(
+  /// 导出并返回文件路径（供 UI 显示保存位置）
+  static Future<String> exportAndSave(
     List<Transaction> transactions, {
     String? dateRange,
   }) async {
     final fileName = 'lokii_${dateRange ?? Formatters.date(DateTime.now())}.csv';
     final file = await exportToCSV(transactions, fileName: fileName);
-    await shareCSV(file);
+    return file.path;
   }
 }

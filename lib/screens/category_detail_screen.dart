@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/transaction_provider.dart';
-import '../providers/category_provider.dart';
 import '../utils/theme.dart';
 import '../utils/formatters.dart';
 import '../widgets/transaction_tile.dart';
@@ -24,29 +23,25 @@ class CategoryDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.backgroundGray,
-      appBar: AppBar(
-        title: Text(categoryName),
-      ),
+      backgroundColor: AppTheme.bg(context),
+      appBar: AppBar(title: Text(categoryName)),
       body: Consumer<TransactionProvider>(
         builder: (context, provider, _) {
           return FutureBuilder<List<dynamic>>(
             future: provider.getTransactionsByCategory(categoryName, year: year, month: month),
             builder: (context, snapshot) {
               if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const Center(
-                  child: Text('暂无记录', style: TextStyle(color: AppTheme.textSecondary)),
+                return Center(
+                  child: Text('暂无记录', style: TextStyle(color: AppTheme.text2(context))),
                 );
               }
 
               final transactions = snapshot.data!;
-              final total = transactions.fold(0.0, (sum, t) => sum + t.amount);
+              final total = transactions.fold(0.0, (s, t) => s + t.amount);
 
-              // 按日期分组
               final grouped = <String, List<dynamic>>{};
               for (var t in transactions) {
-                final key = Formatters.date(t.date);
-                grouped.putIfAbsent(key, () => []).add(t);
+                grouped.putIfAbsent(Formatters.date(t.date), () => []).add(t);
               }
               final dateKeys = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
 
@@ -58,7 +53,7 @@ class CategoryDetailScreen extends StatelessWidget {
                       margin: const EdgeInsets.all(16),
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppTheme.cardColor(context),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
@@ -69,13 +64,11 @@ class CategoryDetailScreen extends StatelessWidget {
                             children: [
                               Text(
                                 '${Formatters.month(DateTime(year, month))} $categoryName',
-                                style: const TextStyle(fontSize: 15, color: AppTheme.textSecondary),
+                                style: TextStyle(fontSize: 15, color: AppTheme.text2(context)),
                               ),
                               const SizedBox(height: 4),
-                              Text(
-                                '${transactions.length} 笔',
-                                style: const TextStyle(fontSize: 13, color: AppTheme.textTertiary),
-                              ),
+                              Text('${transactions.length} 笔',
+                                  style: TextStyle(fontSize: 13, color: AppTheme.text3(context))),
                             ],
                           ),
                           Text(
@@ -91,46 +84,36 @@ class CategoryDetailScreen extends StatelessWidget {
                     ),
                   ),
 
-                  // 账目列表
-                  SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        if (index >= dateKeys.length) return null;
-                        final dateKey = dateKeys[index];
-                        final dayTransactions = grouped[dateKey]!;
-                        final date = dayTransactions.first.date;
+                  SliverList.builder(
+                    itemCount: dateKeys.length,
+                    itemBuilder: (context, index) {
+                      final dateKey = dateKeys[index];
+                      final dayTxns = grouped[dateKey]!;
+                      final date = dayTxns.first.date;
 
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                              child: Text(
-                                '${Formatters.day(date)} ${Formatters.shortWeekday(date)}',
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.textSecondary,
-                                ),
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                            child: Text(
+                              '${Formatters.day(date)} ${Formatters.shortWeekday(date)}',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.text2(context),
                               ),
                             ),
-                            ...dayTransactions.map((t) => TransactionTile(
-                                  transaction: t,
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => AddTransactionScreen(editTransaction: t),
-                                      ),
-                                    );
-                                  },
-                                  onDelete: () => provider.deleteTransaction(t.id),
-                                )),
-                          ],
-                        );
-                      },
-                      childCount: dateKeys.length,
-                    ),
+                          ),
+                          ...dayTxns.map((t) => TransactionTile(
+                                transaction: t,
+                                onTap: () => Navigator.push(context,
+                                    MaterialPageRoute(builder: (_) => AddTransactionScreen(editTransaction: t))),
+                                onDelete: () => provider.deleteTransaction(t.id),
+                              )),
+                        ],
+                      );
+                    },
                   ),
 
                   const SliverToBoxAdapter(child: SizedBox(height: 40)),

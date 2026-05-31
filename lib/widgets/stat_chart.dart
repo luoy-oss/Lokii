@@ -5,13 +5,11 @@ import '../utils/theme.dart';
 class StatChart extends StatelessWidget {
   final List<double> monthlyData;
   final bool isExpense;
-  final int year;
 
   const StatChart({
     super.key,
     required this.monthlyData,
     required this.isExpense,
-    required this.year,
   });
 
   @override
@@ -25,12 +23,10 @@ class StatChart extends StatelessWidget {
         maxY: maxY > 0 ? maxY : 100,
         barTouchData: BarTouchData(
           touchTooltipData: BarTouchTooltipData(
-            getTooltipItem: (group, groupIndex, rod, rodIndex) {
-              return BarTooltipItem(
-                rod.toY.toStringAsFixed(2),
-                const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-              );
-            },
+            getTooltipItem: (g, _, rod, __) => BarTooltipItem(
+              rod.toY.toStringAsFixed(2),
+              const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+            ),
           ),
         ),
         titlesData: FlTitlesData(
@@ -38,15 +34,11 @@ class StatChart extends StatelessWidget {
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              getTitlesWidget: (value, meta) {
-                return Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    '${value.toInt() + 1}月',
-                    style: const TextStyle(fontSize: 11, color: AppTheme.textTertiary),
-                  ),
-                );
-              },
+              getTitlesWidget: (v, _) => Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text('${v.toInt() + 1}月',
+                    style: TextStyle(fontSize: 11, color: AppTheme.text3(context))),
+              ),
             ),
           ),
           leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
