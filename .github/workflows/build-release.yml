@@ -33,8 +33,14 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
 
-      # 确保 android 目录存在
+      # 生成 Android 平台目录
       - run: flutter create --platforms android . || true
+
+      # 固定 Gradle 版本为 8.9
+      - name: Set Gradle 8.9
+        run: |
+          sed -i 's|distributionUrl=.*|distributionUrl=https\\://services.gradle.org/distributions/gradle-8.9-all.zip|' android/gradle/wrapper/gradle-wrapper.properties
+
       - run: flutter pub get
       - run: flutter build apk --release --no-tree-shake-icons ${{ matrix.build_args }}
 
@@ -120,7 +126,7 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
 
-      # 确保 macos 目录存在
+      # 生成 macOS 平台目录
       - run: flutter create --platforms macos . || true
       - run: flutter pub get
       - run: flutter build macos --release --no-tree-shake-icons
