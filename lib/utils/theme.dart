@@ -38,7 +38,7 @@ class AppTheme {
         surface: _lightCard,
         error: destructiveRed,
       ),
-      appBarTheme: const AppBarThemeData(
+      appBarTheme: const AppBarTheme(
         backgroundColor: _lightBg,
         foregroundColor: _lightText1,
         elevation: 0,
@@ -126,7 +126,7 @@ class AppTheme {
         surface: _darkCard,
         error: destructiveRed,
       ),
-      appBarTheme: const AppBarThemeData(
+      appBarTheme: const AppBarTheme(
         backgroundColor: _darkBg,
         foregroundColor: _darkText1,
         elevation: 0,
