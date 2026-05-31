@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 env:
-  FLUTTER_VERSION: '3.32.4'
+  FLUTTER_VERSION: '3.24.5'
 
 jobs:
   # ── Android APK ─────────────────────────────────────────────────────
@@ -27,11 +27,6 @@ jobs:
             build_args: '--target-platform android-x64'
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
 
       - uses: subosito/flutter-action@v2
         with:

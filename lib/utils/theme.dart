@@ -24,7 +24,6 @@ class AppTheme {
   static const Color _darkText1 = Color(0xFFFFFFFF);
   static const Color _darkText2 = Color(0xFF98989D);
   static const Color _darkText3 = Color(0xFF636366);
-  static const Color _darkFill = Color(0xFF1C1C1E);
 
   // ── Light Theme ──────────────────────────────────────────────────────
   static ThemeData get lightTheme {
@@ -51,51 +50,10 @@ class AppTheme {
           letterSpacing: -0.4,
         ),
       ),
-      cardTheme: CardThemeData(
-        color: _lightCard,
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: EdgeInsets.zero,
-      ),
-      filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          backgroundColor: primaryBlue,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: _lightFill,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide.none,
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        hintStyle: const TextStyle(color: _lightText3),
-      ),
-      navigationBarTheme: const NavigationBarThemeData(
-        backgroundColor: Color(0xF7F9F9F9),
-        indicatorColor: primaryBlue,
-        elevation: 0,
-        height: 56,
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-      ),
       dividerTheme: const DividerThemeData(
         color: _lightSeparator,
         thickness: 0.5,
         space: 0,
-      ),
-      bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: _lightCard,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-        ),
-      ),
-      dialogTheme: DialogThemeData(
-        backgroundColor: _lightCard,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
@@ -139,51 +97,10 @@ class AppTheme {
           letterSpacing: -0.4,
         ),
       ),
-      cardTheme: CardThemeData(
-        color: _darkCard,
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: EdgeInsets.zero,
-      ),
-      filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          backgroundColor: primaryBlue,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: _darkCard2,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide.none,
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        hintStyle: const TextStyle(color: _darkText3),
-      ),
-      navigationBarTheme: const NavigationBarThemeData(
-        backgroundColor: Color(0xF71C1C1E),
-        indicatorColor: primaryBlue,
-        elevation: 0,
-        height: 56,
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-      ),
       dividerTheme: const DividerThemeData(
         color: _darkSeparator,
         thickness: 0.5,
         space: 0,
-      ),
-      bottomSheetTheme: const BottomSheetThemeData(
-        backgroundColor: _darkCard,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-        ),
-      ),
-      dialogTheme: DialogThemeData(
-        backgroundColor: _darkCard,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
