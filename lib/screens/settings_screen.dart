@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/transaction_provider.dart';
@@ -145,6 +146,12 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
+  // ── 选择导出目录 ──────────────────────────────────────────────────
+
+  Future<String?> _pickDirectory() async {
+    return await FilePicker.platform.getDirectoryPath(dialogTitle: '选择导出目录');
+  }
+
   // ── 导出数据 ──────────────────────────────────────────────────────
 
   Future<void> _exportCurrentMonth(BuildContext context) async {
@@ -155,6 +162,10 @@ class SettingsScreen extends StatelessWidget {
       endDate: DateTime(now.year, now.month + 1, 0, 23, 59, 59),
     );
     if (txns.isEmpty) return _snack(context, '本月没有数据可导出');
+
+    final dir = await _pickDirectory();
+    if (dir == null) return;
+
     final path = await ExportHelper.exportAndSave(txns, dateRange: Formatters.month(now));
     _showExportResult(context, path);
   }
@@ -168,95 +179,88 @@ class SettingsScreen extends StatelessWidget {
       endDate: DateTime(last.year, last.month + 1, 0, 23, 59, 59),
     );
     if (txns.isEmpty) return _snack(context, '上月没有数据可导出');
-    final path = await ExportHelper.exportAndSave(txns, dateRange: Formatters.month(last));
-    _showExportResult(context, path);
+
+    final dir = await _pickDirectory();
+    if (dir == null) return;
+
+    final file = await ExportHelper.exportToCSV(txns, directory: dir, fileName: 'lokii_${Formatters.month(last)}.csv');
+    _showExportResult(context, file.path);
   }
 
   Future<void> _exportAll(BuildContext context) async {
     final provider = context.read<TransactionProvider>();
     final txns = await provider.getAllTransactions();
     if (txns.isEmpty) return _snack(context, '没有数据可导出');
-    final path = await ExportHelper.exportAndSave(txns, dateRange: '全部');
-    _showExportResult(context, path);
+
+    final dir = await _pickDirectory();
+    if (dir == null) return;
+
+    final file = await ExportHelper.exportToCSV(txns, directory: dir, fileName: 'lokii_全部数据.csv');
+    _showExportResult(context, file.path);
   }
 
   // ── 导入数据 ──────────────────────────────────────────────────────
 
   Future<void> _importData(BuildContext context) async {
-    // 显示输入路径对话框
-    final path = await _showPathInputDialog(
-      context,
-      title: '导入数据',
-      hint: '输入 CSV 文件路径',
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['csv'],
+      dialogTitle: '选择要导入的 CSV 文件',
     );
-    if (path == null || path.isEmpty) return;
+    if (result == null || result.files.isEmpty) return;
+
+    final filePath = result.files.single.path;
+    if (filePath == null) return;
 
     try {
-      final count = await ExportHelper.exportToCSV([], directory: path) as dynamic;
-      // 实际导入逻辑
-      _snack(context, '导入功能需要选择文件');
-    } catch (e) {
-      _snack(context, '导入失败: $e');
-    }
-  }
-
-  // ── 导出/导入配置 ─────────────────────────────────────────────────
-
-  Future<void> _exportConfig(BuildContext context) async {
-    try {
-      final path = await ExportHelper.exportConfig();
-      _showExportResult(context, path.path);
-    } catch (e) {
-      _snack(context, '导出配置失败: $e');
-    }
-  }
-
-  Future<void> _importConfig(BuildContext context) async {
-    final path = await _showPathInputDialog(
-      context,
-      title: '导入配置',
-      hint: '输入 JSON 配置文件路径',
-    );
-    if (path == null || path.isEmpty) return;
-
-    try {
-      final count = await ExportHelper.importConfig(path);
+      final count = await ExportHelper.importFromCSV(filePath);
       if (context.mounted) {
-        _snack(context, '导入成功，共导入 $count 项');
-        // 重新加载设置
-        context.read<SettingsProvider>().loadSettings();
+        _snack(context, '导入成功，共导入 $count 条记录');
+        // 刷新列表
+        context.read<TransactionProvider>().loadMonthTransactions(
+          DateTime.now().year,
+          DateTime.now().month,
+        );
       }
     } catch (e) {
       if (context.mounted) _snack(context, '导入失败: $e');
     }
   }
 
-  // ── 辅助方法 ──────────────────────────────────────────────────────
+  // ── 导出/导入配置 ─────────────────────────────────────────────────
 
-  Future<String?> _showPathInputDialog(BuildContext context, {required String title, required String hint}) async {
-    final ctrl = TextEditingController();
-    // 预填默认路径
-    final defaultPath = await ExportHelper.getDefaultExportPath();
-    ctrl.text = defaultPath;
+  Future<void> _exportConfig(BuildContext context) async {
+    final dir = await _pickDirectory();
+    if (dir == null) return;
 
-    return showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content: TextField(
-          controller: ctrl,
-          decoration: InputDecoration(hintText: hint),
-          maxLines: 2,
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-            child: const Text('确定'),
-          ),
-        ],
-      ),
+    try {
+      final file = await ExportHelper.exportConfig(directory: dir);
+      _showExportResult(context, file.path);
+    } catch (e) {
+      if (context.mounted) _snack(context, '导出配置失败: $e');
+    }
+  }
+
+  Future<void> _importConfig(BuildContext context) async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['json'],
+      dialogTitle: '选择要导入的配置文件',
     );
+    if (result == null || result.files.isEmpty) return;
+
+    final filePath = result.files.single.path;
+    if (filePath == null) return;
+
+    try {
+      final count = await ExportHelper.importConfig(filePath);
+      if (context.mounted) {
+        _snack(context, '导入成功，共导入 $count 项');
+        context.read<SettingsProvider>().loadSettings();
+      }
+    } catch (e) {
+      if (context.mounted) _snack(context, '导入失败: $e');
+    }
   }
 
   void _showExportResult(BuildContext context, String path) {
