@@ -109,6 +109,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen>
                   _buildNoteInput(),
                   const SizedBox(height: 16),
                   _buildDateSelector(),
+                  if (_isEditing) ...[
+                    const SizedBox(height: 40),
+                    _buildDeleteButton(),
+                  ],
                   const SizedBox(height: 40),
                 ],
               ),
@@ -320,6 +324,45 @@ class _AddTransactionScreenState extends State<AddTransactionScreen>
       ),
       child: child,
     );
+  }
+
+  // ── 删除按钮 ──
+  Widget _buildDeleteButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: TextButton(
+        onPressed: _delete,
+        style: TextButton.styleFrom(
+          foregroundColor: AppTheme.destructiveRed,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        child: const Text('删除此账目', style: TextStyle(fontSize: 17)),
+      ),
+    );
+  }
+
+  Future<void> _delete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('确认删除'),
+        content: const Text('删除后无法恢复，确定要删除吗？'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('删除', style: TextStyle(color: AppTheme.destructiveRed)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      final provider = context.read<TransactionProvider>();
+      await provider.deleteTransaction(widget.editTransaction!.id);
+      if (mounted) Navigator.pop(context);
+    }
   }
 
   Future<void> _pickDate() async {
