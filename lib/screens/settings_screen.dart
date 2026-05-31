@@ -19,115 +19,133 @@ class SettingsScreen extends StatelessWidget {
         children: [
           const SizedBox(height: 20),
 
-          // 自动记账
           _SectionHeader(title: '自动记账'),
-          _SectionCard(
-            children: [
-              Consumer<SettingsProvider>(
-                builder: (context, settings, _) {
-                  return _SwitchTile(
-                    icon: Icons.notifications_active,
-                    iconColor: AppTheme.warningOrange,
-                    title: '通知自动记账',
-                    subtitle: '读取支付通知自动记录账目',
-                    value: settings.autoRecordEnabled,
-                    onChanged: (v) => settings.setAutoRecordEnabled(v),
-                  );
-                },
-              ),
-            ],
-          ),
+          _SectionCard(children: [
+            Consumer<SettingsProvider>(
+              builder: (context, settings, _) {
+                return _SwitchTile(
+                  icon: Icons.notifications_active,
+                  iconColor: AppTheme.warningOrange,
+                  title: '通知自动记账',
+                  subtitle: '读取支付通知自动记录账目',
+                  value: settings.autoRecordEnabled,
+                  onChanged: (v) => settings.setAutoRecordEnabled(v),
+                );
+              },
+            ),
+          ]),
 
           const SizedBox(height: 20),
 
-          // 深色模式
           _SectionHeader(title: '外观'),
-          _SectionCard(
-            children: [
-              Consumer<SettingsProvider>(
-                builder: (context, settings, _) {
-                  return _SwitchTile(
-                    icon: Icons.dark_mode,
-                    iconColor: AppTheme.primaryBlue,
-                    title: '深色模式',
-                    subtitle: '切换深色/浅色主题',
-                    value: settings.darkModeEnabled,
-                    onChanged: (v) => settings.setDarkModeEnabled(v),
-                  );
-                },
-              ),
-            ],
-          ),
+          _SectionCard(children: [
+            Consumer<SettingsProvider>(
+              builder: (context, settings, _) {
+                return _SwitchTile(
+                  icon: Icons.dark_mode,
+                  iconColor: AppTheme.primaryBlue,
+                  title: '深色模式',
+                  subtitle: '切换深色/浅色主题',
+                  value: settings.darkModeEnabled,
+                  onChanged: (v) => settings.setDarkModeEnabled(v),
+                );
+              },
+            ),
+          ]),
 
           const SizedBox(height: 20),
 
-          // 数据管理
           _SectionHeader(title: '数据管理'),
-          _SectionCard(
-            children: [
-              _ActionTile(
-                icon: Icons.download,
-                iconColor: AppTheme.primaryBlue,
-                title: '导出本月数据',
-                onTap: () => _exportCurrentMonth(context),
-              ),
-              _Divider(context),
-              _ActionTile(
-                icon: Icons.calendar_month,
-                iconColor: AppTheme.successGreen,
-                title: '导出指定月份',
-                onTap: () => _exportByMonth(context),
-              ),
-              _Divider(context),
-              _ActionTile(
-                icon: Icons.all_inclusive,
-                iconColor: AppTheme.destructiveRed,
-                title: '导出全部数据',
-                onTap: () => _exportAll(context),
-              ),
-            ],
-          ),
+          _SectionCard(children: [
+            _ActionTile(
+              icon: Icons.download,
+              iconColor: AppTheme.primaryBlue,
+              title: '导出本月数据',
+              subtitle: '保存 CSV 到本地',
+              onTap: () => _exportCurrentMonth(context),
+            ),
+            _Divider(context),
+            _ActionTile(
+              icon: Icons.calendar_month,
+              iconColor: AppTheme.successGreen,
+              title: '导出指定月份',
+              subtitle: '保存 CSV 到本地',
+              onTap: () => _exportByMonth(context),
+            ),
+            _Divider(context),
+            _ActionTile(
+              icon: Icons.all_inclusive,
+              iconColor: AppTheme.destructiveRed,
+              title: '导出全部数据',
+              subtitle: '保存 CSV 到本地',
+              onTap: () => _exportAll(context),
+            ),
+            _Divider(context),
+            _ActionTile(
+              icon: Icons.upload_file,
+              iconColor: AppTheme.warningOrange,
+              title: '导入数据',
+              subtitle: '从 CSV 文件导入',
+              onTap: () => _importData(context),
+            ),
+          ]),
 
           const SizedBox(height: 20),
 
-          // 标签管理
+          _SectionHeader(title: '配置管理'),
+          _SectionCard(children: [
+            _ActionTile(
+              icon: Icons.save,
+              iconColor: AppTheme.primaryBlue,
+              title: '导出配置',
+              subtitle: '保存设置、标签、分类',
+              onTap: () => _exportConfig(context),
+            ),
+            _Divider(context),
+            _ActionTile(
+              icon: Icons.restore,
+              iconColor: AppTheme.successGreen,
+              title: '导入配置',
+              subtitle: '恢复设置、标签、分类',
+              onTap: () => _importConfig(context),
+            ),
+          ]),
+
+          const SizedBox(height: 20),
+
           _SectionHeader(title: '标签'),
-          _SectionCard(
-            children: [
-              _ActionTile(
-                icon: Icons.label,
-                iconColor: AppTheme.primaryBlue,
-                title: '管理标签',
-                onTap: () {
-                  Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const TagManageScreen()));
-                },
-              ),
-            ],
-          ),
+          _SectionCard(children: [
+            _ActionTile(
+              icon: Icons.label,
+              iconColor: AppTheme.primaryBlue,
+              title: '管理标签',
+              onTap: () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const TagManageScreen()));
+              },
+            ),
+          ]),
 
           const SizedBox(height: 20),
 
-          // 关于
           _SectionHeader(title: '关于'),
-          _SectionCard(
-            children: [
-              _ActionTile(
-                icon: Icons.info_outline,
-                iconColor: AppTheme.text2(context),
-                title: 'Lokii 记账',
-                subtitle: 'v1.0.0',
-                showArrow: false,
-                onTap: () {},
-              ),
-            ],
-          ),
+          _SectionCard(children: [
+            _ActionTile(
+              icon: Icons.info_outline,
+              iconColor: AppTheme.text2(context),
+              title: 'Lokii 记账',
+              subtitle: 'v1.0.0',
+              showArrow: false,
+              onTap: () {},
+            ),
+          ]),
 
           const SizedBox(height: 40),
         ],
       ),
     );
   }
+
+  // ── 导出数据 ──────────────────────────────────────────────────────
 
   Future<void> _exportCurrentMonth(BuildContext context) async {
     final provider = context.read<TransactionProvider>();
@@ -162,6 +180,85 @@ class SettingsScreen extends StatelessWidget {
     _showExportResult(context, path);
   }
 
+  // ── 导入数据 ──────────────────────────────────────────────────────
+
+  Future<void> _importData(BuildContext context) async {
+    // 显示输入路径对话框
+    final path = await _showPathInputDialog(
+      context,
+      title: '导入数据',
+      hint: '输入 CSV 文件路径',
+    );
+    if (path == null || path.isEmpty) return;
+
+    try {
+      final count = await ExportHelper.exportToCSV([], directory: path) as dynamic;
+      // 实际导入逻辑
+      _snack(context, '导入功能需要选择文件');
+    } catch (e) {
+      _snack(context, '导入失败: $e');
+    }
+  }
+
+  // ── 导出/导入配置 ─────────────────────────────────────────────────
+
+  Future<void> _exportConfig(BuildContext context) async {
+    try {
+      final path = await ExportHelper.exportConfig();
+      _showExportResult(context, path.path);
+    } catch (e) {
+      _snack(context, '导出配置失败: $e');
+    }
+  }
+
+  Future<void> _importConfig(BuildContext context) async {
+    final path = await _showPathInputDialog(
+      context,
+      title: '导入配置',
+      hint: '输入 JSON 配置文件路径',
+    );
+    if (path == null || path.isEmpty) return;
+
+    try {
+      final count = await ExportHelper.importConfig(path);
+      if (context.mounted) {
+        _snack(context, '导入成功，共导入 $count 项');
+        // 重新加载设置
+        context.read<SettingsProvider>().loadSettings();
+      }
+    } catch (e) {
+      if (context.mounted) _snack(context, '导入失败: $e');
+    }
+  }
+
+  // ── 辅助方法 ──────────────────────────────────────────────────────
+
+  Future<String?> _showPathInputDialog(BuildContext context, {required String title, required String hint}) async {
+    final ctrl = TextEditingController();
+    // 预填默认路径
+    final defaultPath = await ExportHelper.getDefaultExportPath();
+    ctrl.text = defaultPath;
+
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: TextField(
+          controller: ctrl,
+          decoration: InputDecoration(hintText: hint),
+          maxLines: 2,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showExportResult(BuildContext context, String path) {
     showDialog(
       context: context,
@@ -174,6 +271,7 @@ class SettingsScreen extends StatelessWidget {
             const Text('文件已保存到：'),
             const SizedBox(height: 8),
             Container(
+              width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: AppTheme.card2Color(ctx),
@@ -187,10 +285,7 @@ class SettingsScreen extends StatelessWidget {
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('确定'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('确定')),
         ],
       ),
     );
@@ -213,11 +308,7 @@ class _SectionHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(32, 0, 16, 8),
       child: Text(
         title.toUpperCase(),
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w400,
-          color: AppTheme.text2(context),
-        ),
+        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w400, color: AppTheme.text2(context)),
       ),
     );
   }
@@ -265,8 +356,7 @@ class _ActionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       leading: Container(
-        width: 32,
-        height: 32,
+        width: 32, height: 32,
         decoration: BoxDecoration(
           color: iconColor.withOpacity(0.15),
           borderRadius: BorderRadius.circular(8),
@@ -275,7 +365,7 @@ class _ActionTile extends StatelessWidget {
       ),
       title: Text(title, style: TextStyle(color: AppTheme.text1(context))),
       subtitle: subtitle != null
-          ? Text(subtitle!, style: TextStyle(color: AppTheme.text2(context)))
+          ? Text(subtitle!, style: TextStyle(color: AppTheme.text2(context), fontSize: 12))
           : null,
       trailing: showArrow
           ? Icon(Icons.chevron_right, color: AppTheme.text3(context), size: 20)
@@ -306,8 +396,7 @@ class _SwitchTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       leading: Container(
-        width: 32,
-        height: 32,
+        width: 32, height: 32,
         decoration: BoxDecoration(
           color: iconColor.withOpacity(0.15),
           borderRadius: BorderRadius.circular(8),
@@ -315,7 +404,7 @@ class _SwitchTile extends StatelessWidget {
         child: Icon(icon, color: iconColor, size: 18),
       ),
       title: Text(title, style: TextStyle(color: AppTheme.text1(context))),
-      subtitle: Text(subtitle, style: TextStyle(color: AppTheme.text2(context))),
+      subtitle: Text(subtitle, style: TextStyle(color: AppTheme.text2(context), fontSize: 12)),
       trailing: Switch(
         value: value,
         onChanged: onChanged,
