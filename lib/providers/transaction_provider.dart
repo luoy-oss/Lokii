@@ -7,42 +7,47 @@ class TransactionProvider extends ChangeNotifier {
   final DBHelper _db = DBHelper.instance;
   List<Transaction> _transactions = [];
   DateTime _selectedMonth = DateTime.now();
+  bool _isLoading = false;
 
   List<Transaction> get transactions => _transactions;
   DateTime get selectedMonth => _selectedMonth;
+  bool get isLoading => _isLoading;
 
-  /// 加载所有账目
-  Future<void> loadTransactions() async {
-    final maps = await _db.getTransactions();
-    _transactions = maps.map((m) => Transaction.fromMap(m)).toList();
-    notifyListeners();
+  /// 加载当前选中月份的账目
+  Future<void> loadCurrentMonth() async {
+    await loadMonthTransactions(_selectedMonth.year, _selectedMonth.month);
   }
 
   /// 加载指定月份的账目
   Future<void> loadMonthTransactions(int year, int month) async {
+    _isLoading = true;
+    notifyListeners();
+
     final startDate = DateTime(year, month, 1);
     final endDate = DateTime(year, month + 1, 0, 23, 59, 59);
     final maps = await _db.getTransactions(startDate: startDate, endDate: endDate);
     _transactions = maps.map((m) => Transaction.fromMap(m)).toList();
+
+    _isLoading = false;
     notifyListeners();
   }
 
   /// 切换选中月份
-  void setSelectedMonth(DateTime month) {
+  Future<void> setSelectedMonth(DateTime month) async {
     _selectedMonth = month;
-    loadMonthTransactions(month.year, month.month);
+    await loadMonthTransactions(month.year, month.month);
   }
 
   /// 前一个月
-  void previousMonth() {
+  Future<void> previousMonth() async {
     _selectedMonth = DateTime(_selectedMonth.year, _selectedMonth.month - 1);
-    loadMonthTransactions(_selectedMonth.year, _selectedMonth.month);
+    await loadMonthTransactions(_selectedMonth.year, _selectedMonth.month);
   }
 
   /// 后一个月
-  void nextMonth() {
+  Future<void> nextMonth() async {
     _selectedMonth = DateTime(_selectedMonth.year, _selectedMonth.month + 1);
-    loadMonthTransactions(_selectedMonth.year, _selectedMonth.month);
+    await loadMonthTransactions(_selectedMonth.year, _selectedMonth.month);
   }
 
   /// 添加账目
@@ -83,6 +88,12 @@ class TransactionProvider extends ChangeNotifier {
       isAutoRecorded: isAutoRecorded,
     );
     await addTransaction(transaction);
+  }
+
+  /// 导入数据后强制刷新
+  Future<void> refreshAfterImport() async {
+    _selectedMonth = DateTime.now();
+    await loadMonthTransactions(_selectedMonth.year, _selectedMonth.month);
   }
 
   /// 获取月度汇总

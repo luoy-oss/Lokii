@@ -1,13 +1,13 @@
 class Transaction {
   final String id;
   final double amount;
-  final bool isExpense; // true=支出, false=收入
+  final bool isExpense;
   final String category;
   final String? note;
   final List<String> tags;
   final DateTime date;
   final DateTime createdAt;
-  final bool isAutoRecorded; // 是否自动记录
+  final bool isAutoRecorded;
 
   Transaction({
     required this.id,
@@ -20,6 +20,8 @@ class Transaction {
     DateTime? createdAt,
     this.isAutoRecorded = false,
   }) : createdAt = createdAt ?? DateTime.now();
+
+  // ── SQLite 映射 ─────────────────────────────────────────────────
 
   Map<String, dynamic> toMap() {
     return {
@@ -48,6 +50,38 @@ class Transaction {
       isAutoRecorded: map['isAutoRecorded'] == 1,
     );
   }
+
+  // ── JSON 序列化（导入导出用） ──────────────────────────────────
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'amount': amount,
+      'isExpense': isExpense,
+      'category': category,
+      'note': note,
+      'tags': tags,
+      'date': date.toIso8601String(),
+      'createdAt': createdAt.toIso8601String(),
+      'isAutoRecorded': isAutoRecorded,
+    };
+  }
+
+  factory Transaction.fromJson(Map<String, dynamic> json) {
+    return Transaction(
+      id: json['id'] as String,
+      amount: (json['amount'] as num).toDouble(),
+      isExpense: json['isExpense'] as bool,
+      category: json['category'] as String,
+      note: json['note'] as String?,
+      tags: (json['tags'] as List<dynamic>?)?.cast<String>() ?? [],
+      date: DateTime.parse(json['date'] as String),
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      isAutoRecorded: json['isAutoRecorded'] as bool? ?? false,
+    );
+  }
+
+  // ── 工具方法 ───────────────────────────────────────────────────
 
   Transaction copyWith({
     String? id,

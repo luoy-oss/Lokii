@@ -272,6 +272,23 @@ class DBHelper {
     return await db.query('categories', orderBy: 'isDefault DESC, name');
   }
 
+  // ==================== 清空操作 ====================
+
+  Future<void> deleteAllTransactions() async {
+    final db = await database;
+    await db.delete('transactions');
+  }
+
+  Future<void> deleteAllTags() async {
+    final db = await database;
+    await db.delete('tags');
+  }
+
+  Future<void> deleteAllCategories() async {
+    final db = await database;
+    await db.delete('categories');
+  }
+
   Future close() async {
     final db = await database;
     db.close();

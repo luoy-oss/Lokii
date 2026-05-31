@@ -35,7 +35,7 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => CategoryProvider()..loadCategories()),
-        ChangeNotifierProvider(create: (_) => TransactionProvider()..loadTransactions()),
+        ChangeNotifierProvider(create: (_) => TransactionProvider()..loadCurrentMonth()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()..loadSettings()),
       ],
       child: const LokiiApp(),
