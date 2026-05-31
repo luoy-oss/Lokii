@@ -56,10 +56,20 @@ class ExportHelper {
       throw Exception('文件不存在: $filePath');
     }
 
-    final content = await file.readAsString();
-    // 去掉 BOM
-    final csvContent = content.startsWith('﻿') ? content.substring(1) : content;
-    final rows = const CsvToListConverter().convert(csvContent);
+    // 读取原始字节，处理 BOM
+    final bytes = await file.readAsBytes();
+    String content;
+    if (bytes.length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF) {
+      // UTF-8 BOM
+      content = String.fromCharCodes(bytes.sublist(3));
+    } else {
+      content = String.fromCharCodes(bytes);
+    }
+
+    // 规范化换行符
+    content = content.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+
+    final rows = const CsvToListConverter(shouldParseNumbers: false).convert(content);
 
     if (rows.length < 2) return 0;
 
@@ -72,28 +82,36 @@ class ExportHelper {
       if (row.length < 4) continue;
 
       try {
-        final dateParts = (row[0] as String).split('-');
+        final dateStr = row[0].toString().trim();
+        final typeStr = row[1].toString().trim();
+        final categoryStr = row[2].toString().trim();
+        final amountStr = row[3].toString().trim();
+
+        if (dateStr.isEmpty || amountStr.isEmpty) continue;
+
+        final dateParts = dateStr.split('-');
+        if (dateParts.length != 3) continue;
+
         final date = DateTime(
           int.parse(dateParts[0]),
           int.parse(dateParts[1]),
           int.parse(dateParts[2]),
         );
-        final isExpense = (row[1] as String) == '支出';
-        final category = row[2] as String;
-        final amount = double.parse(row[3] as String);
-        final tags = (row.length > 4 && (row[4] as String).isNotEmpty)
-            ? (row[4] as String).split(' | ')
+        final isExpense = typeStr == '支出';
+        final amount = double.parse(amountStr);
+        final tags = (row.length > 4 && row[4].toString().trim().isNotEmpty)
+            ? row[4].toString().trim().split(' | ')
             : <String>[];
-        final note = (row.length > 5 && (row[5] as String).isNotEmpty)
-            ? row[5] as String
+        final note = (row.length > 5 && row[5].toString().trim().isNotEmpty)
+            ? row[5].toString().trim()
             : null;
-        final isAuto = row.length > 6 && (row[6] as String) == '是';
+        final isAuto = row.length > 6 && row[6].toString().trim() == '是';
 
         await db.insertTransaction({
           'id': '${DateTime.now().millisecondsSinceEpoch}_$i',
           'amount': amount,
           'isExpense': isExpense ? 1 : 0,
-          'category': category,
+          'category': categoryStr,
           'note': note,
           'tags': tags.join(','),
           'date': date.toIso8601String(),
@@ -101,7 +119,7 @@ class ExportHelper {
           'isAutoRecorded': isAuto ? 1 : 0,
         });
         count++;
-      } catch (_) {
+      } catch (e) {
         // 跳过格式错误的行
         continue;
       }
