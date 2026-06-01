@@ -286,7 +286,7 @@ class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObse
               icon: Icons.info_outline,
               iconColor: AppTheme.text2(context),
               title: 'Lokii 记账',
-              subtitle: 'v1.0.0',
+              subtitle: 'v1.1.0',
               showArrow: false,
               onTap: () {},
             ),
