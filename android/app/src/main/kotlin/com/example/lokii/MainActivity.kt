@@ -3,6 +3,7 @@ package com.example.lokii
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.text.TextUtils
@@ -120,11 +121,13 @@ class MainActivity : FlutterActivity() {
             startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
         } catch (e: Exception) {
             Log.e(TAG, "无法打开通知监听设置: $e")
-            // 备用方案：打开通知设置
+            // 备用方案：打开应用详情设置
             try {
-                startActivity(Intent(Settings.ACTION_NOTIFICATION_SETTINGS))
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                intent.data = android.net.Uri.parse("package:$packageName")
+                startActivity(intent)
             } catch (e2: Exception) {
-                Log.e(TAG, "无法打开通知设置: $e2")
+                Log.e(TAG, "无法打开应用设置: $e2")
             }
         }
     }

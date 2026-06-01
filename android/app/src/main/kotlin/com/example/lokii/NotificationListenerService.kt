@@ -90,7 +90,7 @@ class LokiiNotificationListenerService : NotificationListenerService() {
         Log.w(TAG, "NotificationListener disconnected - 尝试重新连接")
         // 尝试重新连接
         try {
-            requestRebind(componentName)
+            requestRebind(ComponentName(this, LokiiNotificationListenerService::class.java))
         } catch (e: Exception) {
             Log.e(TAG, "Failed to request rebind: $e")
         }
