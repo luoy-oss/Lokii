@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
@@ -5,11 +6,144 @@ import 'package:intl/intl.dart';
 import '../providers/settings_provider.dart';
 import '../providers/transaction_provider.dart';
 import '../database/data_repository.dart';
+import '../services/notification_service.dart';
 import '../utils/theme.dart';
 import 'tag_manage_screen.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> with WidgetsBindingObserver {
+  bool _hasNotificationPermission = false;
+  bool _isServiceRunning = false;
+  bool _isCheckingPermission = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _checkPermissionStatus();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // 从设置页面返回时重新检查权限
+    if (state == AppLifecycleState.resumed) {
+      _checkPermissionStatus();
+    }
+  }
+
+  Future<void> _checkPermissionStatus() async {
+    if (!Platform.isAndroid) {
+      setState(() => _isCheckingPermission = false);
+      return;
+    }
+
+    setState(() => _isCheckingPermission = true);
+
+    try {
+      final hasPermission = await NotificationService.instance.checkPermission();
+      final isRunning = await NotificationService.instance.isServiceRunning();
+
+      if (mounted) {
+        setState(() {
+          _hasNotificationPermission = hasPermission;
+          _isServiceRunning = isRunning;
+          _isCheckingPermission = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isCheckingPermission = false);
+      }
+    }
+  }
+
+  /// 请求通知权限（引导用户到系统设置）
+  Future<void> _requestNotificationPermission() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('需要通知权限'),
+        content: const Text(
+          'Lokii 需要读取通知权限来自动捕获支付通知并记账。\n\n'
+          '请在接下来的设置页面中找到"Lokii"并开启通知使用权。',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('去设置', style: TextStyle(color: AppTheme.primaryBlue)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await NotificationService.instance.openNotificationSettings();
+    }
+  }
+
+  /// 开启自动记账
+  Future<void> _enableAutoRecord() async {
+    // 先检查权限
+    if (!_hasNotificationPermission) {
+      await _requestNotificationPermission();
+      // 重新检查权限
+      await _checkPermissionStatus();
+      if (!_hasNotificationPermission) {
+        // 用户未授权，不开启
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('需要通知权限才能使用自动记账')),
+          );
+        }
+        return;
+      }
+    }
+
+    // 开启自动记账
+    await context.read<SettingsProvider>().setAutoRecordEnabled(true);
+
+    // 启动保活服务
+    await NotificationService.instance.startKeepAlive();
+
+    // 开始监听通知
+    NotificationService.instance.startListening();
+
+    // 重新检查服务状态
+    await _checkPermissionStatus();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('自动记账已开启')),
+      );
+    }
+  }
+
+  /// 关闭自动记账
+  Future<void> _disableAutoRecord() async {
+    await context.read<SettingsProvider>().setAutoRecordEnabled(false);
+
+    // 停止监听
+    NotificationService.instance.stopListening();
+
+    // 停止保活服务
+    await NotificationService.instance.stopKeepAlive();
+
+    // 重新检查服务状态
+    await _checkPermissionStatus();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,6 +154,7 @@ class SettingsScreen extends StatelessWidget {
         children: [
           const SizedBox(height: 20),
 
+          // ── 自动记账 ──────────────────────────────────────────────
           _SectionHeader(title: '自动记账'),
           _SectionCard(children: [
             Consumer<SettingsProvider>(
@@ -30,14 +165,57 @@ class SettingsScreen extends StatelessWidget {
                   title: '通知自动记账',
                   subtitle: '读取支付通知自动记录账目',
                   value: settings.autoRecordEnabled,
-                  onChanged: (v) => settings.setAutoRecordEnabled(v),
+                  onChanged: (v) {
+                    if (v) {
+                      _enableAutoRecord();
+                    } else {
+                      _disableAutoRecord();
+                    }
+                  },
                 );
               },
             ),
+            // 权限状态指示器
+            if (Platform.isAndroid) ...[
+              _Divider(context),
+              _buildPermissionStatus(),
+            ],
           ]),
 
           const SizedBox(height: 20),
 
+          // ── 权限与保活 ────────────────────────────────────────────
+          if (Platform.isAndroid) ...[
+            _SectionHeader(title: '权限与保活'),
+            _SectionCard(children: [
+              _ActionTile(
+                icon: Icons.notifications_outlined,
+                iconColor: AppTheme.primaryBlue,
+                title: '通知使用权',
+                subtitle: _hasNotificationPermission ? '已授权' : '未授权 - 点击去设置',
+                onTap: _requestNotificationPermission,
+              ),
+              _Divider(context),
+              _ActionTile(
+                icon: Icons.battery_saver,
+                iconColor: AppTheme.successGreen,
+                title: '电池优化',
+                subtitle: '建议关闭以保持后台运行',
+                onTap: () => NotificationService.instance.openBatterySettings(),
+              ),
+              _Divider(context),
+              _ActionTile(
+                icon: Icons.refresh,
+                iconColor: AppTheme.text2(context),
+                title: '刷新状态',
+                subtitle: '检查权限和服务状态',
+                onTap: _checkPermissionStatus,
+              ),
+            ]),
+            const SizedBox(height: 20),
+          ],
+
+          // ── 外观 ─────────────────────────────────────────────────
           _SectionHeader(title: '外观'),
           _SectionCard(children: [
             Consumer<SettingsProvider>(
@@ -56,6 +234,7 @@ class SettingsScreen extends StatelessWidget {
 
           const SizedBox(height: 20),
 
+          // ── 数据管理 ─────────────────────────────────────────────
           _SectionHeader(title: '数据管理'),
           _SectionCard(children: [
             _ActionTile(
@@ -85,6 +264,7 @@ class SettingsScreen extends StatelessWidget {
 
           const SizedBox(height: 20),
 
+          // ── 标签 ─────────────────────────────────────────────────
           _SectionHeader(title: '标签'),
           _SectionCard(children: [
             _ActionTile(
@@ -99,6 +279,7 @@ class SettingsScreen extends StatelessWidget {
 
           const SizedBox(height: 20),
 
+          // ── 关于 ─────────────────────────────────────────────────
           _SectionHeader(title: '关于'),
           _SectionCard(children: [
             _ActionTile(
@@ -112,6 +293,55 @@ class SettingsScreen extends StatelessWidget {
           ]),
 
           const SizedBox(height: 40),
+        ],
+      ),
+    );
+  }
+
+  // ── 权限状态指示器 ────────────────────────────────────────────────
+
+  Widget _buildPermissionStatus() {
+    if (_isCheckingPermission) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          children: [
+            SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+            SizedBox(width: 8),
+            Text('检查权限状态...'),
+          ],
+        ),
+      );
+    }
+
+    Color statusColor;
+    String statusText;
+    IconData statusIcon;
+
+    if (!_hasNotificationPermission) {
+      statusColor = Colors.red;
+      statusText = '未授权通知使用权';
+      statusIcon = Icons.error_outline;
+    } else if (!_isServiceRunning) {
+      statusColor = AppTheme.warningOrange;
+      statusText = '服务未运行';
+      statusIcon = Icons.warning_amber;
+    } else {
+      statusColor = AppTheme.successGreen;
+      statusText = '服务运行中';
+      statusIcon = Icons.check_circle_outline;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Icon(statusIcon, size: 16, color: statusColor),
+          const SizedBox(width: 8),
+          Text(
+            statusText,
+            style: TextStyle(fontSize: 12, color: statusColor),
+          ),
         ],
       ),
     );

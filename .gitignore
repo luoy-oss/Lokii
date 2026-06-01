@@ -38,7 +38,16 @@ app.*.map.json
 
 # 平台目录由 flutter create 自动生成，不纳入版本控制
 # CI 会用 flutter create --platforms 重新生成
-/android/
+# 但保留自定义的 Android 原生代码
+/android/*
+!/android/app/
+/android/app/*
+!/android/app/src/
+/android/app/src/*
+!/android/app/src/main/
+/android/app/src/main/*
+!/android/app/src/main/kotlin/
+!/android/app/src/main/AndroidManifest.xml
 /ios/
 /linux/
 /macos/
