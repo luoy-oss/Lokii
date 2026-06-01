@@ -36,12 +36,15 @@ jobs:
       # 用 CI 的 Flutter 重新生成平台目录
       - run: flutter create --project-name lokii --platforms android . || true
       - run: flutter pub get
-      - run: flutter build apk --release --no-tree-shake-icons ${{ matrix.build_args }}
+      - run: flutter build apk --release --no-tree-shake-icons --split-per-abi ${{ matrix.build_args }}
+
+      - name: Rename APK
+        run: mv build/app/outputs/flutter-apk/*.apk build/app/outputs/flutter-apk/lokii-${{ matrix.target_arch }}.apk
 
       - uses: actions/upload-artifact@v4
         with:
           name: apk-${{ matrix.target_arch }}
-          path: build/app/outputs/flutter-apk/*.apk
+          path: build/app/outputs/flutter-apk/lokii-*.apk
 
   # ── Windows ─────────────────────────────────────────────────────────
   build-windows:
@@ -177,9 +180,9 @@ jobs:
             **Linux**: 解压 tar.gz 后运行 `lokii`
             **macOS**: 解压 zip 后运行 `Lokii.app`
           files: |
-            artifacts/apk-arm64-v8a/*.apk
-            artifacts/apk-armeabi-v7a/*.apk
-            artifacts/apk-x86_64/*.apk
+            artifacts/apk-arm64-v8a/lokii-*.apk
+            artifacts/apk-armeabi-v7a/lokii-*.apk
+            artifacts/apk-x86_64/lokii-*.apk
             artifacts/windows-x64/*.zip
             artifacts/linux-x64/*.tar.gz
             artifacts/macos/*.zip
