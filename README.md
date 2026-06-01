@@ -1,6 +1,6 @@
 # Lokii 记账
 
-一个现代化的记账应用，具有苹果设计风格，适用于小米手机。
+一个现代化的记账应用，具有苹果设计风格，适用于 Android 和桌面平台。
 
 ## 功能特性
 
@@ -9,18 +9,20 @@
 - 📊 **月度统计** - 饼图展示分类占比，清晰了解消费结构
 - 📈 **年度统计** - 柱状图展示月度趋势，掌握全年收支情况
 - 🔍 **分类查看** - 点击分类查看该分类下的所有账目
-- 🔔 **自动记账** - 读取支付宝、微信支付通知自动记录（可选）
-- 📤 **数据导出** - 支持导出为 CSV 文件，方便备份和分析
-- 🌙 **本地存储** - 所有数据存储在本地，保护隐私安全
+- 🌙 **深色模式** - 支持浅色/深色主题切换
+- 📤 **数据导出** - 导出全部数据为 JSON 文件
+- 📥 **数据导入** - 从 JSON 文件导入数据（自动备份）
+- 💾 **备份恢复** - 自动备份 + 手动恢复，防止数据丢失
+- 🗑️ **账目删除** - 左滑删除或编辑页删除，支持确认对话框
 
 ## 技术栈
 
-- **框架**: Flutter 3.x
+- **框架**: Flutter 3.24.5
 - **语言**: Dart
 - **数据库**: SQLite (sqflite)
 - **状态管理**: Provider
 - **图表**: fl_chart
-- **国际化**: intl
+- **文件选择**: file_picker
 
 ## 安装运行
 
@@ -37,20 +39,21 @@ export PATH="$PATH:`pwd`/flutter/bin"
 ### 2. 克隆项目
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/luoy-oss/Lokii.git
 cd Lokii
 ```
 
-### 3. 安装依赖
+### 3. 生成平台目录
+
+```bash
+# 首次需要生成平台目录（已 gitignore）
+flutter create --project-name lokii --platforms android,windows,linux,macos .
+```
+
+### 4. 安装依赖并运行
 
 ```bash
 flutter pub get
-```
-
-### 4. 运行应用
-
-```bash
-# 连接手机或启动模拟器后
 flutter run
 ```
 
@@ -61,12 +64,12 @@ lib/
 ├── main.dart                    # 应用入口
 ├── app.dart                     # 应用配置和主题
 ├── models/                      # 数据模型
-│   ├── transaction.dart         # 账目模型
+│   ├── transaction.dart         # 账目模型（含 JSON 序列化）
 │   ├── category.dart            # 分类模型
 │   └── tag.dart                 # 标签模型
-├── database/                    # 数据库操作
+├── database/                    # 数据层
 │   ├── db_helper.dart           # SQLite 数据库管理
-│   └── export_helper.dart       # CSV 导出功能
+│   └── data_repository.dart     # 数据仓库（导入/导出/备份/恢复）
 ├── providers/                   # 状态管理
 │   ├── transaction_provider.dart
 │   ├── category_provider.dart
@@ -85,53 +88,61 @@ lib/
 │   ├── category_icon.dart
 │   ├── month_picker.dart
 │   └── tag_chip.dart
-├── services/                    # 服务层
-│   └── notification_service.dart
 └── utils/                       # 工具类
     ├── constants.dart           # 常量定义
     ├── theme.dart               # 苹果风格主题
     └── formatters.dart          # 格式化工具
 ```
 
-## 自动记账功能
+## 数据管理
 
-自动记账功能需要授权通知监听权限：
+### 导出数据
+设置 → 数据管理 → 导出数据
 
-1. 打开应用 → 设置 → 自动记账
-2. 开启"通知自动记账"开关
-3. 系统会提示授权通知监听权限
-4. 授权后，应用会自动解析支付宝、微信支付通知并记录
+导出为 JSON 文件，包含所有账目、标签、分类。
 
-**支持的通知格式**:
-- 支付宝: "您在XXX消费XX元"
-- 微信支付: "微信支付收款¥XX"
+### 导入数据
+设置 → 数据管理 → 导入数据
 
-## 数据导出
+从 JSON 文件导入数据，**会覆盖现有数据**。导入前自动备份。
 
-支持导出为 CSV 文件，包含以下字段：
-- 日期
-- 类型（收入/支出）
-- 分类
-- 金额
-- 标签
-- 备注
-- 是否自动记录
+### 恢复备份
+设置 → 数据管理 → 恢复备份
 
-导出的文件可以通过系统分享功能发送到其他应用。
+支持两种方式：
+- 从自动备份恢复（按时间列表选择）
+- 从外部备份文件恢复
+
+## 下载安装
+
+从 [GitHub Releases](https://github.com/luoy-oss/Lokii/releases) 下载对应平台的安装包：
+
+| 平台 | 说明 |
+|------|------|
+| Android | 下载 APK 直接安装 |
+| Windows | 解压 zip 后运行 `lokii.exe` |
+| Linux | 解压 tar.gz 后运行 `lokii` |
+| macOS | 解压 zip 后运行 `Lokii.app` |
 
 ## 开发说明
 
 ### 添加新分类
-
 编辑 `lib/utils/constants.dart` 中的 `AppCategories` 类。
 
 ### 修改主题
-
 编辑 `lib/utils/theme.dart` 中的 `AppTheme` 类。
 
-### 自动记账规则
+### 构建发布
+```bash
+# 分析代码
+flutter analyze lib/
 
-编辑 `lib/services/notification_service.dart` 中的解析规则。
+# 构建 Windows
+flutter build windows --release --no-tree-shake-icons
+
+# 构建 Android
+flutter build apk --release --no-tree-shake-icons
+```
 
 ## License
 
